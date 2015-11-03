@@ -1,0 +1,14 @@
+{
+  "name": "a-photo-editor",
+  "version": "0.0.1",
+  "description": "a photo editor",
+  "scripts": {
+    "test": "jasmine",
+    "build": "babel --presets react v2.jsx --watch --out-dir ."
+  },
+  "author": "qh512n@yp.com",
+  "devDependencies": {
+    "babel-preset-react": "^6.0.15",
+    "jasmine": "^2.3.2"
+  }
+}
