@@ -22,13 +22,18 @@
   });
 
   var Footer = React.createClass({
+    savePhoto: function () {
+      Dispatcher.dispatch({
+        actionType: 'save-photo-trigger'
+      });
+    },
     render: function () {
       return React.createElement(
         'footer',
         null,
         React.createElement(
           'button',
-          { className: 'pe-btn' },
+          { className: 'pe-btn', onClick: this.savePhoto },
           'Save'
         ),
         React.createElement(
@@ -150,7 +155,9 @@
           canvas.height = canvasRect.height;
           canvas.getContext('2d').drawImage(payload.canvas, 0, 0, payload.canvas.width, payload.canvas.height, 0, 0, canvasRect.width, canvasRect.height);
 
-          helpers.syncPrevImage(canvas, this.refs.previewImg, x, y, w, h);
+          helpers.syncPrevImage(canvas, this.refs.previewImg, x, y, w, h, function (dataUrl) {
+            DataStore.setCroppedImage(dataUrl);
+          });
         }
       }).bind(this));
     },
@@ -238,7 +245,7 @@
       var self = this;
       Dispatcher.register(function (payload) {
         if (payload.actionType === 'close-all') {
-          self.refs.editor.style.display = 'none';
+          self.refs.editor.parentNode.style.display = 'none';
         }
       });
       DataStore.on('change', this._onChange);
@@ -287,10 +294,13 @@
       if (this._$canvas) {
         interact(this._$canvas).unset();
         $canvasBox.removeChild(this._$canvas);
+        this._$canvas = null;
         this._resetSlider();
       }
 
       var $img = new Image();
+      img.crossOrigin = "Anonymous";
+
       var self = this;
       $img.onload = function () {
         var $canvas = document.createElement('canvas');
@@ -396,9 +406,7 @@
     },
 
     componentWillReceiveProps: function (newProps) {
-      if (newProps.photo.src != this.props.photo.src || newProps.mode.name !== this.props.mode.name) {
-        this._setupCanvas(newProps.photo, newProps.mode);
-      }
+      this._setupCanvas(newProps.photo, newProps.mode);
     },
 
     componentDidMount: function () {
@@ -464,14 +472,21 @@
     });
     this.initialized = false;
     this.close = function () {
-      document.getElementsByClassName('pe')[0].style.display = 'none';
+      $elem.style.display = 'none';
     };
     this.open = function () {
       if (!this.initialized) {
         ReactDOM.render(React.createElement(PhotoEditor, null), $elem);
       }
       this.initialized = true;
-      document.getElementsByClassName('pe')[0].style.display = 'block';
+      $elem.style.display = 'block';
+    };
+    this.onsave = function (callback) {
+      Dispatcher.register(function (payload) {
+        if (payload.actionType === 'save-photo') {
+          callback(payload.imgDataUrl);
+        }
+      });
     };
   }
 

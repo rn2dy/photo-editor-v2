@@ -50,12 +50,13 @@
     return $canvas;
   }
 
-  helpers.syncPrevImage = helpers.debounce(function($srcCanvas, $destImg, x, y, w, h) {
+  helpers.syncPrevImage = helpers.debounce(function($srcCanvas, $destImg, x, y, w, h, callback) {
     var $canvas = helpers.createCanvas(w, h);
     var ctx = $canvas.getContext('2d');
     var imgData = $srcCanvas.getContext('2d').getImageData(x || 0, y || 0, w, h);
     ctx.putImageData(imgData, 0, 0);
     $destImg.src = $canvas.toDataURL();
+    callback($destImg.src);
   }, 150);
 
   helpers.updateCSSTransform = function($elem, attr, x, y) {
