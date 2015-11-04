@@ -144,7 +144,9 @@
           var h = cropBoxRect.height;
           var scale = payload.scale;
 
-          if(x < 0 || y < 0 || w > canvasRect.width || h > canvasRect.height) return;
+          if(x < 0 || y < 0
+            || w > Math.abs(canvasRect.width - x)
+            || h > Math.abs(canvasRect.height - y)) return;
 
           canvas.width = canvasRect.width;
           canvas.height = canvasRect.height;
@@ -280,7 +282,6 @@
     },
 
     _setupCanvas: function(photo, mode) {
-      console.log(photo, mode);
       if(!photo || !mode) return;
       var $canvasBox= this.refs.canvasBox;
       var $cropBox= this.refs.cropBox;
@@ -498,11 +499,9 @@
     window.LincolnPhotoEditor = LincolnPhotoEditor;
   }
 
-  // var editor = new LincolnPhotoEditor(
-  //               document.getElementById('photo-editor'), {
-  //                 isDemo: true});
-  // editor.onsave(function(photo, processedPhoto) {
-  //   console.log(photo);
-  // });
-  // editor.open();
+  var editor = new LincolnPhotoEditor(document.getElementById('photo-editor'), {isDemo: true});
+  editor.onsave(function(photo, processedPhoto) {
+    console.log(photo);
+  });
+  editor.open();
 }());

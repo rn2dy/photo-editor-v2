@@ -247,9 +247,10 @@ header .fa-remove:hover {
 }
 
 .noUi-target {
-  height: 1px;
+  height: 0;
   border: none;
   margin-left: -12px;
+  border-top: 1px solid #fff;
 }
 
 .noUi-target:before,
@@ -452,7 +453,7 @@ header .fa-remove:hover {
   height: 147px;
   width: 80%;
   margin: auto;
-  margin-bottom: -40px;
+  margin-bottom: -60px;
   border: 1px dashed #ccc;
   border-top: none;
   position: relative;
@@ -493,4 +494,8 @@ header .fa-remove:hover {
   background: #fff;
   border: 1px solid #ccc;
   position: relative;
+}
+
+.pe-mip:hover {
+  opacity: 0.5;
 }
