@@ -14,9 +14,9 @@
   <script src="//cdnjs.cloudflare.com/ajax/libs/react/0.14.1/react-with-addons.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/react/0.14.1/react-dom.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
-  <script src="/v2/vendor/classname.js"></script>
-  <script src="/v2/vendor/flux.js"></script>
-  <script src="/v2/vendor/EventEmitter.min.js"></script>
+  <script src="vendor/classname.js"></script>
+  <script src="vendor/flux.js"></script>
+  <script src="vendor/EventEmitter.min.js"></script>
 </head>
 
 <body>
@@ -25,15 +25,8 @@
 
   <script src="v2.helpers.js"></script>
   <script src="v2.flux.js"></script>
-  <script src="v2.js"></script>
+  <script src="v2.jsx" type="text/babel"></script>
 
-  <script>
-    var editor;
-    window.onload = function() {
-      editor = new LincolnPhotoEditor(document.getElementById('photo-editor'), {isDemo: true});
-      editor.open();
-    };
-  </script>
 </body>
 
 </html>

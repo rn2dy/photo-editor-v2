@@ -24,7 +24,12 @@
   var Footer = React.createClass({
     savePhoto: function () {
       Dispatcher.dispatch({
-        actionType: 'save-photo-trigger'
+        actionType: 'save-photo'
+      });
+    },
+    closePhotoEditor: function () {
+      Dispatcher.dispatch({
+        actionType: 'close-all'
       });
     },
     render: function () {
@@ -38,7 +43,7 @@
         ),
         React.createElement(
           'button',
-          { className: 'pe-btn pe-cancel' },
+          { className: 'pe-btn pe-cancel', onClick: this.closePhotoEditor },
           'Cancel'
         )
       );
@@ -155,8 +160,8 @@
           canvas.height = canvasRect.height;
           canvas.getContext('2d').drawImage(payload.canvas, 0, 0, payload.canvas.width, payload.canvas.height, 0, 0, canvasRect.width, canvasRect.height);
 
-          helpers.syncPrevImage(canvas, this.refs.previewImg, x, y, w, h, function (dataUrl) {
-            DataStore.setCroppedImage(dataUrl);
+          helpers.syncPrevImage(canvas, this.refs.previewImg, x, y, w, h, function (dataURL) {
+            DataStore.setCroppedImage(dataURL);
           });
         }
       }).bind(this));
@@ -299,7 +304,7 @@
       }
 
       var $img = new Image();
-      img.crossOrigin = "Anonymous";
+      $img.crossOrigin = "Anonymous";
 
       var self = this;
       $img.onload = function () {
@@ -466,10 +471,8 @@
   });
 
   function LincolnPhotoEditor($elem, config) {
-    DataStore.initialize({
-      isDemo: config.isDemo,
-      photos: config.photos
-    });
+    DataStore.initialize(config);
+
     this.initialized = false;
     this.close = function () {
       $elem.style.display = 'none';
@@ -484,7 +487,7 @@
     this.onsave = function (callback) {
       Dispatcher.register(function (payload) {
         if (payload.actionType === 'save-photo') {
-          callback(payload.imgDataUrl);
+          callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
         }
       });
     };

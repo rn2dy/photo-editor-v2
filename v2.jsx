@@ -8,9 +8,18 @@
       });
     },
     render: function() {
+      var selectedMode = this.props.modes.find(function(mode) {
+        return mode.selected;
+      });
+      var h3;
+      if(this.props.fixedMode) {
+        h3 = <h3>Edit {selectedMode.title}</h3>
+      } else {
+        h3 = <h3>Profile / Cover Photo Editor</h3>
+      }
       return (
         <header>
-          <h3>Profile / Cover Photo Editor</h3>
+          {h3}
           <i className="fa fa-remove" onClick={this.closePhotoEditor}></i>
         </header>
       );
@@ -20,14 +29,19 @@
   var Footer = React.createClass({
     savePhoto: function() {
       Dispatcher.dispatch({
-        actionType: 'save-photo-trigger'
-      })
+        actionType: 'save-photo'
+      });
+    },
+    closePhotoEditor: function() {
+      Dispatcher.dispatch({
+        actionType: 'close-all'
+      });
     },
     render: function() {
       return (
         <footer>
           <button className="pe-btn" onClick={this.savePhoto}>Save</button>
-          <button className="pe-btn pe-cancel">Cancel</button>
+          <button className="pe-btn pe-cancel" onClick={this.closePhotoEditor}>Cancel</button>
         </footer>
       );
     }
@@ -42,11 +56,13 @@
       var menuItems = this.props.modes.map(function(mode, id) {
         var classes = classNames({
           'pe-menu-item' : true,
-          'pe-active': mode.selected
+          'pe-active': mode.selected,
+          'pe-hide': !mode.selected && self.props.fixedMode
         });
         return (
-          <div className={classes} title={mode.label} key={id}>
-            <i className={mode.iconClass} onClick={self.selectMode.bind(self, mode)}></i>
+          <div className={classes} title={mode.title} key={id} onClick={self.selectMode.bind(self, mode)}>
+            <div><i className={mode.iconClass}></i></div>
+            <div><span className="pe-menu-label">{mode.label}</span></div>
           </div>
         );
       });
@@ -132,15 +148,14 @@
 
           canvas.width = canvasRect.width;
           canvas.height = canvasRect.height;
-          canvas
-            .getContext('2d')
+          canvas.getContext('2d')
             .drawImage(payload.canvas,
                        0, 0, payload.canvas.width, payload.canvas.height,
                        0, 0, canvasRect.width, canvasRect.height);
 
-           helpers.syncPrevImage(canvas, this.refs.previewImg, x, y, w, h, function(dataUrl) {
-             DataStore.setCroppedImage(dataUrl);
-           });
+          helpers.syncPrevImage(canvas, this.refs.previewImg, x, y, w, h, function(dataURL) {
+            DataStore.setCroppedImage(dataURL);
+          });
         }
       }.bind(this));
     },
@@ -166,7 +181,7 @@
         template = (
           <div className="pe-preview-coverphoto">
             <div className="pe-header">
-              <a className="logo" href="#yp"><img src="/v2/img/logo-yp.png"/></a>
+              <a className="logo" href="#yp"><img src="/img/logo-yp.png"/></a>
             </div>
             <div className="pe-banner-x">
               <img id="pe-img" ref="previewImg"/>
@@ -186,14 +201,17 @@
     }
   });
 
-
   var Body = React.createClass({
     render: function() {
+      var carousel;
+      if(this.props.carousel) {
+        carousel = <Carousel photos={this.props.photos} />;
+      }
       return (
         <div className="pe-body">
-          <Menu modes={this.props.modes}/>
-          <Carousel photos={this.props.photos}/>
-          <Editor photo={this.props.selectedPhoto} mode={this.props.selectedMode}/>
+          <Menu modes={this.props.modes} fixedMode={this.props.fixedMode}/>
+          {carousel}
+          <Editor photo={this.props.selectedPhoto} mode={this.props.selectedMode} carousel={this.props.carousel}/>
         </div>
       );
     }
@@ -206,7 +224,9 @@
         photos: DataStore.getPhotos(),
         selectedPhoto: DataStore.getSelectedPhoto(),
         modes: DataStore.getModes(),
-        selectedMode: DataStore.getSelectedMode()
+        selectedMode: DataStore.getSelectedMode(),
+        carousel: DataStore.getCarousel(),
+        fixedMode: DataStore.getFixedMode()
       }
     },
     componentDidMount: function() {
@@ -223,12 +243,15 @@
     },
     render: function() {
       return (
-        <div className="pe" ref="editor">
-          <Header />
+        <div className="pe unselectable" ref="editor">
+          <Header modes={this.state.modes}
+            fixedMode={this.state.fixedMode}/>
           <Body photos={this.state.photos}
             selectedPhoto={this.state.selectedPhoto}
             modes={this.state.modes}
-            selectedMode={this.state.selectedMode}/>
+            selectedMode={this.state.selectedMode}
+            carousel={this.state.carousel}
+            fixedMode={this.state.fixedMode}/>
           <Footer />
         </div>
       );
@@ -238,7 +261,9 @@
         photos: DataStore.getPhotos(),
         selectedPhoto: DataStore.getSelectedPhoto(),
         modes: DataStore.getModes(),
-        selectedMode: DataStore.getSelectedMode()
+        selectedMode: DataStore.getSelectedMode(),
+        carousel: DataStore.getCarousel(),
+        fixedMode: DataStore.getFixedMode()
       });
     }
   });
@@ -267,14 +292,15 @@
       }
 
       var $img = new Image();
-      img.crossOrigin = "Anonymous";
+      $img.crossOrigin = "Anonymous";
 
       var self = this;
       $img.onload = function() {
+        var box = self.refs.editBox.getBoundingClientRect();
         var $canvas = document.createElement('canvas');
         var w = $canvas.width = $img.naturalWidth;
         var h = $canvas.height = $img.naturalHeight;
-        var wh = mode.resolve(w, h);
+        var wh = mode.resolve(box, w, h);
         w = wh[0], h = wh[1];
 
         $cropBox.style.width = w + 'px';
@@ -362,7 +388,15 @@
       });
 
       $slider.noUiSlider.on('update', function() {
-        var scale = (1 + ($slider.noUiSlider.get() - 50) / 50).toPrecision(2);
+        var d = $slider.noUiSlider.get();
+        var scale;
+        if (d > 50) {
+          scale = 1 + 7 / 50 * (d - 50) ;
+        } else if (d < 50){
+          scale = 0.125 + 0.875 * d / 50;
+        } else {
+          scale = 1;
+        }
         if(this._$canvas) {
           this._scale = scale;
           helpers.updateCSSTransform(this._$canvas, 'scale', scale);
@@ -398,14 +432,18 @@
         'pe-full': !this.state.layout.preview
       });
 
+      var classes = classNames({
+        'pe-editor': true,
+        'pe-carousel': this.props.carousel
+      });
+
       return (
-        <div className="pe-editor">
-          <div className={classesA}>
+        <div className={classes}>
+          <div className={classesA} ref="editBox">
             <div className="pe-edit-area" ref="editArea">
-              <div className="pe-canvas" ref="canvasBox">
-                <div className="pe-crop" ref="cropBox"></div>
-              </div>
+              <div className="pe-canvas" ref="canvasBox"></div>
             </div>
+            <div className="pe-crop" ref="cropBox"></div>
           </div>
 
           <div className={classesC}>
@@ -422,10 +460,8 @@
   });
 
   function LincolnPhotoEditor($elem, config) {
-    DataStore.initialize({
-      isDemo: config.isDemo,
-      photos: config.photos
-    });
+    DataStore.initialize(config);
+
     this.initialized = false;
     this.close = function() {
       $elem.style.display = 'none';
@@ -443,7 +479,7 @@
     this.onsave = function(callback) {
       Dispatcher.register(function(payload) {
         if(payload.actionType === 'save-photo') {
-          callback(payload.imgDataUrl);
+          callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
         }
       });
     };
@@ -460,4 +496,13 @@
     window.LincolnPhotoEditor = LincolnPhotoEditor;
   }
 
+  var editor = new LincolnPhotoEditor(
+                document.getElementById('photo-editor'), {
+                  isDemo: true,
+                  fixedMode: true
+                });
+  editor.onsave(function(photo, processedPhoto) {
+    console.log(photo);
+  });
+  editor.open();
 }());

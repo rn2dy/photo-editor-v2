@@ -7,6 +7,14 @@ body {
   background-color: #cceeff;
 }
 
+.unselectable {
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 .pe {
   font-family: helvetica, arial, sans-serif;
   font-size: 14px;
@@ -73,10 +81,20 @@ header .fa-remove:hover {
   width: 60px;
 }
 
+.pe-menu-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.15);
+  font-weight: bold;
+}
+
 .pe-menu-item {
   margin-bottom: 20px;
   text-align: center;
   cursor: pointer;
+}
+
+.pe-menu-item.pe-hide {
+  display: none;
 }
 
 .pe-menu-item i {
@@ -85,7 +103,9 @@ header .fa-remove:hover {
 }
 
 .pe-menu-item:hover i,
-.pe-menu-item.pe-active i {
+.pe-menu-item:hover .pe-menu-label,
+.pe-menu-item.pe-active i,
+.pe-menu-item.pe-active .pe-menu-label {
   color: #7B96C7;
 }
 
@@ -146,10 +166,13 @@ header .fa-remove:hover {
 }
 
 .pe-editor {
-  left: 240px;
+  left: 60px;
   right: 0;
   border-left: 1px solid #e5e5e5;
   overflow: hidden;
+}
+.pe-editor.pe-carousel{
+  left: 240px;
 }
 
 .pe-editor-box {
@@ -325,8 +348,8 @@ header .fa-remove:hover {
 }
 
 .pe-control a {
-  padding: 2px 8px;
-  font-size: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
   color: #fff;
   background-color: rgba(0, 0, 0, 0.6);
   box-shadow: 0 0 5px #ccc;
