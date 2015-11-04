@@ -171,7 +171,7 @@ header .fa-remove:hover {
   border-left: 1px solid #e5e5e5;
   overflow: hidden;
 }
-.pe-editor.pe-carousel{
+.pe-editor.pe-with-carousel{
   left: 240px;
 }
 
@@ -316,7 +316,7 @@ header .fa-remove:hover {
   display: block;
   color: #787878;
   position: absolute;
-  bottom: -8px;
+  bottom: -12px;
   font-size: 10px;
   width: 100%;
   text-align: center;

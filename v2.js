@@ -8,14 +8,28 @@
       });
     },
     render: function () {
-      return React.createElement(
-        'header',
-        null,
-        React.createElement(
+      var selectedMode = this.props.modes.find(function (mode) {
+        return mode.selected;
+      });
+      var h3;
+      if (this.props.fixedMode) {
+        h3 = React.createElement(
+          'h3',
+          null,
+          'Edit ',
+          selectedMode.title
+        );
+      } else {
+        h3 = React.createElement(
           'h3',
           null,
           'Profile / Cover Photo Editor'
-        ),
+        );
+      }
+      return React.createElement(
+        'header',
+        null,
+        h3,
         React.createElement('i', { className: 'fa fa-remove', onClick: this.closePhotoEditor })
       );
     }
@@ -59,12 +73,26 @@
       var menuItems = this.props.modes.map(function (mode, id) {
         var classes = classNames({
           'pe-menu-item': true,
-          'pe-active': mode.selected
+          'pe-active': mode.selected,
+          'pe-hide': !mode.selected && self.props.fixedMode
         });
         return React.createElement(
           'div',
-          { className: classes, title: mode.label, key: id },
-          React.createElement('i', { className: mode.iconClass, onClick: self.selectMode.bind(self, mode) })
+          { className: classes, title: mode.title, key: id, onClick: self.selectMode.bind(self, mode) },
+          React.createElement(
+            'div',
+            null,
+            React.createElement('i', { className: mode.iconClass })
+          ),
+          React.createElement(
+            'div',
+            null,
+            React.createElement(
+              'span',
+              { className: 'pe-menu-label' },
+              mode.label
+            )
+          )
         );
       });
 
@@ -200,7 +228,7 @@
             React.createElement(
               'a',
               { className: 'logo', href: '#yp' },
-              React.createElement('img', { src: '/v2/img/logo-yp.png' })
+              React.createElement('img', { src: 'http://i4.ypcdn.com/ypu/images/logo-yp.png' })
             )
           ),
           React.createElement(
@@ -226,12 +254,16 @@
 
   var Body = React.createClass({
     render: function () {
+      var carousel;
+      if (this.props.carousel) {
+        carousel = React.createElement(Carousel, { photos: this.props.photos });
+      }
       return React.createElement(
         'div',
         { className: 'pe-body' },
-        React.createElement(Menu, { modes: this.props.modes }),
-        React.createElement(Carousel, { photos: this.props.photos }),
-        React.createElement(Editor, { photo: this.props.selectedPhoto, mode: this.props.selectedMode })
+        React.createElement(Menu, { modes: this.props.modes, fixedMode: this.props.fixedMode }),
+        carousel,
+        React.createElement(Editor, { photo: this.props.selectedPhoto, mode: this.props.selectedMode, carousel: this.props.carousel })
       );
     }
   });
@@ -243,7 +275,9 @@
         photos: DataStore.getPhotos(),
         selectedPhoto: DataStore.getSelectedPhoto(),
         modes: DataStore.getModes(),
-        selectedMode: DataStore.getSelectedMode()
+        selectedMode: DataStore.getSelectedMode(),
+        carousel: DataStore.getCarousel(),
+        fixedMode: DataStore.getFixedMode()
       };
     },
     componentDidMount: function () {
@@ -261,12 +295,15 @@
     render: function () {
       return React.createElement(
         'div',
-        { className: 'pe', ref: 'editor' },
-        React.createElement(Header, null),
+        { className: 'pe unselectable', ref: 'editor' },
+        React.createElement(Header, { modes: this.state.modes,
+          fixedMode: this.state.fixedMode }),
         React.createElement(Body, { photos: this.state.photos,
           selectedPhoto: this.state.selectedPhoto,
           modes: this.state.modes,
-          selectedMode: this.state.selectedMode }),
+          selectedMode: this.state.selectedMode,
+          carousel: this.state.carousel,
+          fixedMode: this.state.fixedMode }),
         React.createElement(Footer, null)
       );
     },
@@ -275,7 +312,9 @@
         photos: DataStore.getPhotos(),
         selectedPhoto: DataStore.getSelectedPhoto(),
         modes: DataStore.getModes(),
-        selectedMode: DataStore.getSelectedMode()
+        selectedMode: DataStore.getSelectedMode(),
+        carousel: DataStore.getCarousel(),
+        fixedMode: DataStore.getFixedMode()
       });
     }
   });
@@ -292,6 +331,7 @@
     },
 
     _setupCanvas: function (photo, mode) {
+      console.log(photo, mode);
       if (!photo || !mode) return;
       var $canvasBox = this.refs.canvasBox;
       var $cropBox = this.refs.cropBox;
@@ -308,10 +348,11 @@
 
       var self = this;
       $img.onload = function () {
+        var box = self.refs.editBox.getBoundingClientRect();
         var $canvas = document.createElement('canvas');
         var w = $canvas.width = $img.naturalWidth;
         var h = $canvas.height = $img.naturalHeight;
-        var wh = mode.resolve(w, h);
+        var wh = mode.resolve(box, w, h);
         w = wh[0], h = wh[1];
 
         $cropBox.style.width = w + 'px';
@@ -368,9 +409,7 @@
         $canvasBox.appendChild($canvas);
         self._$canvas = $canvas;
         self._$cropBox = $cropBox;
-        if (self.state.layout.preview) {
-          self._onCanvasChange();
-        }
+        self._onCanvasChange();
       };
 
       helpers.loadImage($img, photo);
@@ -399,7 +438,15 @@
       });
 
       $slider.noUiSlider.on('update', (function () {
-        var scale = (1 + ($slider.noUiSlider.get() - 50) / 50).toPrecision(2);
+        var d = $slider.noUiSlider.get();
+        var scale;
+        if (d > 50) {
+          scale = 1 + 7 / 50 * (d - 50);
+        } else if (d < 50) {
+          scale = 0.125 + 0.875 * d / 50;
+        } else {
+          scale = 1;
+        }
         if (this._$canvas) {
           this._scale = scale;
           helpers.updateCSSTransform(this._$canvas, 'scale', scale);
@@ -435,21 +482,23 @@
         'pe-full': !this.state.layout.preview
       });
 
+      var classes = classNames({
+        'pe-editor': true,
+        'pe-with-carousel': this.props.carousel
+      });
+
       return React.createElement(
         'div',
-        { className: 'pe-editor' },
+        { className: classes },
         React.createElement(
           'div',
-          { className: classesA },
+          { className: classesA, ref: 'editBox' },
           React.createElement(
             'div',
             { className: 'pe-edit-area', ref: 'editArea' },
-            React.createElement(
-              'div',
-              { className: 'pe-canvas', ref: 'canvasBox' },
-              React.createElement('div', { className: 'pe-crop', ref: 'cropBox' })
-            )
-          )
+            React.createElement('div', { className: 'pe-canvas', ref: 'canvasBox' })
+          ),
+          React.createElement('div', { className: 'pe-crop', ref: 'cropBox' })
         ),
         React.createElement(
           'div',
@@ -471,23 +520,26 @@
   });
 
   function LincolnPhotoEditor($elem, config) {
-    DataStore.initialize(config);
+    DataStore.initialize(config || {});
 
     this.initialized = false;
     this.close = function () {
       $elem.style.display = 'none';
     };
-    this.open = function () {
+    this.open = function (mode, photo) {
       if (!this.initialized) {
         ReactDOM.render(React.createElement(PhotoEditor, null), $elem);
       }
       this.initialized = true;
       $elem.style.display = 'block';
+
+      if (mode) DataStore.setSelectedMode({ name: mode }, true);
+      if (photo) DataStore.setSelectedPhoto(photo);
     };
     this.onsave = function (callback) {
       Dispatcher.register(function (payload) {
         if (payload.actionType === 'save-photo') {
-          callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
+          if (callback) callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
         }
       });
     };
@@ -503,4 +555,12 @@
   } else {
     window.LincolnPhotoEditor = LincolnPhotoEditor;
   }
+
+  // var editor = new LincolnPhotoEditor(
+  //               document.getElementById('photo-editor'), {
+  //                 isDemo: true});
+  // editor.onsave(function(photo, processedPhoto) {
+  //   console.log(photo);
+  // });
+  // editor.open();
 })();

@@ -142,10 +142,24 @@
       DataStore.trigger('change');
     },
     setSelectedPhoto: function(photo, pass) {
-      this.getSelectedPhoto().selected = false;
-      _photos.find(function(p) {
-        return p.src === photo.src;
-      }).selected = true;
+      if(_photos.length === 0) {
+        photo.selected = true;
+        _photos.push(photo);
+      } else {
+        var selectedPhoto = this.getSelectedPhoto();
+        if(selectedPhoto) {
+          selectedPhoto.selected = false;
+        }
+        var targetPhoto = _photos.find(function(p) {
+          return p.src === photo.src;
+        });
+        if(targetPhoto) {
+          targetPhoto.selected = true;
+        } else {
+          photo.selected = true;
+          _photos.push(photo);
+        }
+      }
       if(!pass) DataStore.trigger('change');
     },
     getModes: function() {

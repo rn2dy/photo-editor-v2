@@ -181,7 +181,7 @@
         template = (
           <div className="pe-preview-coverphoto">
             <div className="pe-header">
-              <a className="logo" href="#yp"><img src="/img/logo-yp.png"/></a>
+              <a className="logo" href="#yp"><img src="http://i4.ypcdn.com/ypu/images/logo-yp.png"/></a>
             </div>
             <div className="pe-banner-x">
               <img id="pe-img" ref="previewImg"/>
@@ -280,6 +280,7 @@
     },
 
     _setupCanvas: function(photo, mode) {
+      console.log(photo, mode);
       if(!photo || !mode) return;
       var $canvasBox= this.refs.canvasBox;
       var $cropBox= this.refs.cropBox;
@@ -357,9 +358,7 @@
         $canvasBox.appendChild($canvas);
         self._$canvas = $canvas;
         self._$cropBox = $cropBox;
-        if(self.state.layout.preview) {
-          self._onCanvasChange();
-        }
+        self._onCanvasChange();
       };
 
       helpers.loadImage($img, photo);
@@ -434,7 +433,7 @@
 
       var classes = classNames({
         'pe-editor': true,
-        'pe-carousel': this.props.carousel
+        'pe-with-carousel': this.props.carousel
       });
 
       return (
@@ -460,13 +459,13 @@
   });
 
   function LincolnPhotoEditor($elem, config) {
-    DataStore.initialize(config);
+    DataStore.initialize(config || {});
 
     this.initialized = false;
     this.close = function() {
       $elem.style.display = 'none';
     };
-    this.open = function() {
+    this.open = function(mode, photo) {
       if(!this.initialized) {
         ReactDOM.render(
           <PhotoEditor />,
@@ -475,11 +474,14 @@
       }
       this.initialized = true;
       $elem.style.display = 'block';
+
+      if(mode) DataStore.setSelectedMode({name: mode}, true);
+      if(photo) DataStore.setSelectedPhoto(photo);
     };
     this.onsave = function(callback) {
       Dispatcher.register(function(payload) {
         if(payload.actionType === 'save-photo') {
-          callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
+          if(callback) callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
         }
       });
     };
@@ -496,13 +498,11 @@
     window.LincolnPhotoEditor = LincolnPhotoEditor;
   }
 
-  var editor = new LincolnPhotoEditor(
-                document.getElementById('photo-editor'), {
-                  isDemo: true,
-                  fixedMode: true
-                });
-  editor.onsave(function(photo, processedPhoto) {
-    console.log(photo);
-  });
-  editor.open();
+  // var editor = new LincolnPhotoEditor(
+  //               document.getElementById('photo-editor'), {
+  //                 isDemo: true});
+  // editor.onsave(function(photo, processedPhoto) {
+  //   console.log(photo);
+  // });
+  // editor.open();
 }());
