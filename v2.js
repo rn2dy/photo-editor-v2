@@ -40,10 +40,23 @@
       Dispatcher.dispatch({
         actionType: 'save-photo'
       });
+      this.saveBtn.start();
+      setTimeout((function () {
+        this.saveBtn.stop();
+      }).bind(this), 10000);
     },
     closePhotoEditor: function () {
       Dispatcher.dispatch({
         actionType: 'close-all'
+      });
+    },
+    componentDidMount: function () {
+      var self = this;
+      self.saveBtn = Ladda.create(self.refs.saveBtn);
+      Dispatcher.register(function (payload) {
+        if (payload.actionType === 'save-photo-done') {
+          self.saveBtn.stop();
+        }
       });
     },
     render: function () {
@@ -52,8 +65,14 @@
         null,
         React.createElement(
           'button',
-          { className: 'pe-btn', onClick: this.savePhoto },
-          'Save'
+          { className: 'pe-btn ladda-button', ref: 'saveBtn',
+            'data-style': 'zoom-in',
+            onClick: this.savePhoto },
+          React.createElement(
+            'span',
+            { className: 'ladda-label' },
+            'Save'
+          )
         ),
         React.createElement(
           'button',
@@ -182,7 +201,7 @@
           var h = cropBoxRect.height;
           var scale = payload.scale;
 
-          if (x < 0 || y < 0 || w > canvasRect.width || h > canvasRect.height) return;
+          if (x < 0 || y < 0 || w > Math.abs(canvasRect.width - x) || h > Math.abs(canvasRect.height - y)) return;
 
           canvas.width = canvasRect.width;
           canvas.height = canvasRect.height;
@@ -331,7 +350,6 @@
     },
 
     _setupCanvas: function (photo, mode) {
-      console.log(photo, mode);
       if (!photo || !mode) return;
       var $canvasBox = this.refs.canvasBox;
       var $cropBox = this.refs.cropBox;
@@ -536,10 +554,19 @@
       if (mode) DataStore.setSelectedMode({ name: mode }, true);
       if (photo) DataStore.setSelectedPhoto(photo);
     };
+    this.token = '';
+    var self = this;
     this.onsave = function (callback) {
-      Dispatcher.register(function (payload) {
+      if (self.token) {
+        Dispatcher.unregister(self.token);
+      }
+      self.token = Dispatcher.register(function (payload) {
         if (payload.actionType === 'save-photo') {
-          if (callback) callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage());
+          if (callback) {
+            callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage(), function () {
+              Dispatcher.dispatch({ actionType: 'save-photo-done' });
+            });
+          }
         }
       });
     };
@@ -556,9 +583,7 @@
     window.LincolnPhotoEditor = LincolnPhotoEditor;
   }
 
-  // var editor = new LincolnPhotoEditor(
-  //               document.getElementById('photo-editor'), {
-  //                 isDemo: true});
+  // var editor = new LincolnPhotoEditor(document.getElementById('photo-editor'), {isDemo: true});
   // editor.onsave(function(photo, processedPhoto) {
   //   console.log(photo);
   // });

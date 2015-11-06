@@ -339,12 +339,19 @@ header .fa-remove:hover {
 .pe-control {
   position: absolute;
   top: 10px;
+}
+
+.pe-control-left {
+  margin-left: 20px;
+}
+
+.pe-control-right {
   right: 35%;
   margin-right: 20px;
   transition: right 0.3s ease;
 }
 
-.pe-control.pe-full {
+.pe-control-right.pe-full {
   right: 20px;
 }
 

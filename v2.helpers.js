@@ -72,6 +72,10 @@
         style = 'translate(' + x + 'px, ' + (y || x) + 'px)';
         regex = /translate\(.*?\)/i;
         break;
+      case 'rotate':
+        style = 'rotate(' + x + 'deg)';
+        regex = /rotate\(.*?\)/i;
+        break;
     }
 
     if(i != -1) {

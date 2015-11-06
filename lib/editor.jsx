@@ -1,5 +1,6 @@
 import DataStore from './store'
 
-var db = new DataStore();
-
-console.log(db.options);
+export default function() {
+  this.db = new DataStore();
+  console.log(this.db.config);
+}
