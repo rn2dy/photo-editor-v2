@@ -35,10 +35,47 @@
     }
   });
 
+  var ConfirmBox = React.createClass({
+    render: function () {
+      return React.createElement(
+        'div',
+        { className: 'pe-confirm', ref: 'confirm' },
+        React.createElement(
+          'p',
+          null,
+          this.props.message
+        ),
+        React.createElement(
+          'div',
+          { className: 'footer' },
+          React.createElement(
+            'button',
+            { className: 'pe-btn', onClick: this.props.yes },
+            'Yes'
+          ),
+          React.createElement(
+            'button',
+            { className: 'pe-btn', onClick: this.props.no },
+            'No'
+          ),
+          React.createElement(
+            'button',
+            { className: 'pe-btn', onClick: this.props.cancel },
+            'Cancel'
+          )
+        )
+      );
+    }
+  });
+
   var Footer = React.createClass({
-    savePhoto: function () {
+    save: function () {
+      this.refs.confirm.style.display = 'block';
+    },
+    _savePhoto: function (hideOriginal) {
       Dispatcher.dispatch({
-        actionType: 'save-photo'
+        actionType: 'save-photo',
+        hideOriginal: hideOriginal
       });
       this.saveBtn.start();
       setTimeout((function () {
@@ -49,6 +86,17 @@
       Dispatcher.dispatch({
         actionType: 'close-all'
       });
+    },
+    yes: function () {
+      this.refs.confirm.style.display = 'none';
+      this._savePhoto(true);
+    },
+    no: function () {
+      this.refs.confirm.style.display = 'none';
+      this._savePhoto(false);
+    },
+    cancel: function () {
+      this.refs.confirm.style.display = 'none';
     },
     componentDidMount: function () {
       var self = this;
@@ -67,7 +115,7 @@
           'button',
           { className: 'pe-btn ladda-button', ref: 'saveBtn',
             'data-style': 'zoom-in',
-            onClick: this.savePhoto },
+            onClick: this.save },
           React.createElement(
             'span',
             { className: 'ladda-label' },
@@ -78,6 +126,34 @@
           'button',
           { className: 'pe-btn pe-cancel', onClick: this.closePhotoEditor },
           'Cancel'
+        ),
+        React.createElement(
+          'div',
+          { className: 'pe-confirm', ref: 'confirm' },
+          React.createElement(
+            'p',
+            null,
+            'Hide original photo?'
+          ),
+          React.createElement(
+            'div',
+            { className: 'footer' },
+            React.createElement(
+              'button',
+              { className: 'pe-btn', onClick: this.yes },
+              'Yes'
+            ),
+            React.createElement(
+              'button',
+              { className: 'pe-btn', onClick: this.no },
+              'No'
+            ),
+            React.createElement(
+              'button',
+              { className: 'pe-btn pe-cancel', onClick: this.cancel },
+              'Cancel'
+            )
+          )
         )
       );
     }
@@ -349,7 +425,7 @@
       this._onCanvasChange();
     },
 
-    _setupCanvas: function (photo, mode) {
+    _setupCanvas: function (photo, mode, rotation) {
       if (!photo || !mode) return;
       var $canvasBox = this.refs.canvasBox;
       var $cropBox = this.refs.cropBox;
@@ -368,17 +444,16 @@
       $img.onload = function () {
         var box = self.refs.editBox.getBoundingClientRect();
         var $canvas = document.createElement('canvas');
-        var w = $canvas.width = $img.naturalWidth;
-        var h = $canvas.height = $img.naturalHeight;
-        var wh = mode.resolve(box, w, h);
-        w = wh[0], h = wh[1];
+        self._rotateCanvas($canvas, $img, rotation || 0);
 
-        $cropBox.style.width = w + 'px';
-        $cropBox.style.height = h + 'px';
-        $cropBox.style.marginLeft = -w / 2 + 'px';
-        $cropBox.style.marginTop = -h / 2 + 'px';
+        var wh = mode.resolve(box, $canvas.width, $canvas.height);
 
-        $canvas.getContext('2d').drawImage($img, 0, 0);
+        $cropBox.style.width = wh[0] + 'px';
+        $cropBox.style.height = wh[1] + 'px';
+        $cropBox.style.marginLeft = -wh[0] / 2 + 'px';
+        $cropBox.style.marginTop = -wh[1] / 2 + 'px';
+
+        $canvas.getContext('2d').drawImage($img, -$img.naturalWidth / 2, -$img.naturalHeight / 2);
 
         if (mode.resizable) {
           interact($canvas).resizable({
@@ -433,6 +508,32 @@
       helpers.loadImage($img, photo);
     },
 
+    rotateLeft: function () {
+      this._rotation = this.rotation === 0 ? 270 : (this._rotation - 90) % 360;
+      this._setupCanvas(this.props.photo, this.props.mode, this._rotation);
+    },
+
+    rotateRight: function () {
+      this._rotation = (this._rotation + 90) % 360;
+      this._setupCanvas(this.props.photo, this.props.mode, this._rotation);
+    },
+
+    _rotateCanvas: function (canvas, image, r) {
+      var ctx = canvas.getContext("2d");
+      var w = image.naturalWidth;
+      var h = image.naturalHeight;
+      if (r == 90 || r == 270) {
+        canvas.width = h;
+        canvas.height = w;
+        ctx.translate(h / 2, w / 2);
+      } else {
+        canvas.width = w;
+        canvas.height = h;
+        ctx.translate(w / 2, h / 2);
+      }
+      ctx.rotate(r * Math.PI / 180);
+    },
+
     _resetSlider: function () {
       this._scale = 1;
       this.refs.slider && this.refs.slider.noUiSlider.set(50);
@@ -476,10 +577,12 @@
     },
 
     componentWillReceiveProps: function (newProps) {
+      this._rotation = 0;
       this._setupCanvas(newProps.photo, newProps.mode);
     },
 
     componentDidMount: function () {
+      this._rotation = 0;
       this._setupCanvas(this.props.photo, this.props.mode);
       this._setupSlider();
     },
@@ -496,7 +599,7 @@
       });
 
       var classesC = classNames({
-        'pe-control': true,
+        'pe-control pe-control-right': true,
         'pe-full': !this.state.layout.preview
       });
 
@@ -525,6 +628,20 @@
             'a',
             { className: 'pe-close', onClick: this.togglePreview },
             'Preview'
+          )
+        ),
+        React.createElement(
+          'div',
+          { className: 'pe-control pe-control-left' },
+          React.createElement(
+            'a',
+            { className: 'pe-rotate-left', onClick: this.rotateLeft },
+            React.createElement('i', { className: 'fa fa-rotate-left' })
+          ),
+          React.createElement(
+            'a',
+            { className: 'pe-rotate-right', onClick: this.rotateRight },
+            React.createElement('i', { className: 'fa fa-rotate-right' })
           )
         ),
         React.createElement(
@@ -563,7 +680,7 @@
       self.token = Dispatcher.register(function (payload) {
         if (payload.actionType === 'save-photo') {
           if (callback) {
-            callback(DataStore.getSelectedPhoto(), DataStore.getCroppedImage(), function () {
+            callback(payload.hideOriginal, DataStore.getCroppedImage(), function () {
               Dispatcher.dispatch({ actionType: 'save-photo-done' });
             });
           }
@@ -584,8 +701,8 @@
   }
 
   // var editor = new LincolnPhotoEditor(document.getElementById('photo-editor'), {isDemo: true});
-  // editor.onsave(function(photo, processedPhoto) {
-  //   console.log(photo);
+  // editor.onsave(function(hideOriginal, processedPhoto) {
+  //   console.log(hideOriginal);
   // });
   // editor.open();
 })();

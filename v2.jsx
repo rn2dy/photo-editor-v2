@@ -26,10 +26,29 @@
     }
   });
 
+  var ConfirmBox = React.createClass({
+    render: function() {
+      return (
+        <div className="pe-confirm" ref="confirm">
+          <p>{this.props.message}</p>
+          <div className="footer">
+            <button className="pe-btn" onClick={this.props.yes}>Yes</button>
+            <button className="pe-btn" onClick={this.props.no}>No</button>
+            <button className="pe-btn" onClick={this.props.cancel}>Cancel</button>
+          </div>
+        </div>
+      );
+    }
+  });
+
   var Footer = React.createClass({
-    savePhoto: function() {
+    save: function() {
+      this.refs.confirm.style.display = 'block';
+    },
+    _savePhoto: function(hideOriginal) {
       Dispatcher.dispatch({
-        actionType: 'save-photo'
+        actionType: 'save-photo',
+        hideOriginal: hideOriginal
       });
       this.saveBtn.start();
       setTimeout(function() {
@@ -40,6 +59,17 @@
       Dispatcher.dispatch({
         actionType: 'close-all'
       });
+    },
+    yes: function() {
+      this.refs.confirm.style.display = 'none';
+      this._savePhoto(true);
+    },
+    no: function() {
+      this.refs.confirm.style.display = 'none';
+      this._savePhoto(false);
+    },
+    cancel: function() {
+      this.refs.confirm.style.display = 'none';
     },
     componentDidMount: function() {
       var self = this;
@@ -55,10 +85,19 @@
         <footer>
           <button className="pe-btn ladda-button" ref="saveBtn"
             data-style="zoom-in"
-            onClick={this.savePhoto}>
+            onClick={this.save}>
             <span className="ladda-label">Save</span>
           </button>
           <button className="pe-btn pe-cancel" onClick={this.closePhotoEditor}>Cancel</button>
+
+          <div className="pe-confirm" ref="confirm">
+            <p>Hide original photo?</p>
+            <div className="footer">
+              <button className="pe-btn" onClick={this.yes}>Yes</button>
+              <button className="pe-btn" onClick={this.no}>No</button>
+              <button className="pe-btn pe-cancel" onClick={this.cancel}>Cancel</button>
+            </div>
+          </div>
         </footer>
       );
     }
@@ -317,9 +356,7 @@
       $img.onload = function() {
         var box = self.refs.editBox.getBoundingClientRect();
         var $canvas = document.createElement('canvas');
-        console.log(rotation);
         self._rotateCanvas($canvas, $img, rotation || 0);
-        console.log($canvas.width, $canvas.height);
 
         var wh = mode.resolve(box, $canvas.width, $canvas.height);
 
@@ -544,7 +581,7 @@
         if(payload.actionType === 'save-photo') {
           if(callback) {
             callback(
-              DataStore.getSelectedPhoto(),
+              payload.hideOriginal,
               DataStore.getCroppedImage(),
               function() {
                 Dispatcher.dispatch({actionType: 'save-photo-done'});
@@ -566,9 +603,9 @@
     window.LincolnPhotoEditor = LincolnPhotoEditor;
   }
 
-  var editor = new LincolnPhotoEditor(document.getElementById('photo-editor'), {isDemo: true});
-  editor.onsave(function(photo, processedPhoto) {
-    console.log(photo);
-  });
-  editor.open();
+  // var editor = new LincolnPhotoEditor(document.getElementById('photo-editor'), {isDemo: true});
+  // editor.onsave(function(hideOriginal, processedPhoto) {
+  //   console.log(hideOriginal);
+  // });
+  // editor.open();
 }());

@@ -389,6 +389,36 @@ header .fa-remove:hover {
   float: right;
 }
 
+.pe-confirm {
+  position: fixed;
+  height: 140px;
+  width: 320px;
+  background: #fff;
+  left: 50%;
+  top: 50%;
+  margin-left: -160px;
+  margin-top: -70px;
+  border-radius: 3px;
+  border: 1px solid #787878;
+  box-shadow: 0 0 5px #ccc;
+  display: none;
+}
+
+.pe-confirm p {
+  padding-left: 10px;
+  font-size: 16px;
+}
+
+.pe-confirm .footer {
+  position: absolute;
+  bottom: 0;
+  padding: 5px 6px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #f6f7f8;
+  border-top: 1px solid #e5e5e5;
+}
+
 .pe-btn {
   padding: 4px 14px;
   font-size: 14px;
